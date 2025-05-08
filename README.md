@@ -14,7 +14,11 @@ Ziel diese Projektes ist es, CATAN nach den Regeln bon 1995 in Java zu realisier
 #### Vorraussichtliche Herausforderungen
 
   - Hexagon implenentierung und dessen Positionen für Straße, Siedlungen/ Stadt
+<<<<<<< HEAD
   - test Philipp git
   - neuer tes
   
   
+=======
+  - Test Phillip
+>>>>>>> branch 'main' of https://github.com/Jakob-332/Dealer-von-Catan
