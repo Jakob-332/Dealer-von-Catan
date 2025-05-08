@@ -19,6 +19,7 @@ Ziel diese Projektes ist es, CATAN nach den Regeln bon 1995 in Java zu realisier
   - neuer tes
   -4353536
   -2395239583290ur901835983195
+  -neuer test1605
   
   
 =======
