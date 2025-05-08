@@ -31,3 +31,4 @@ Ziel diese Projektes ist es, CATAN nach den Regeln bon 1995 in Java zu realisier
 >>>>>>> branch 'main' of <https://github.com/Jakob-332/Dealer-von-Catan>
 
 - Halli hallo von Nik
+- Kleiner test
