@@ -17,6 +17,7 @@ Ziel diese Projektes ist es, CATAN nach den Regeln bon 1995 in Java zu realisier
 <<<<<<< HEAD
   - test Philipp git
   - neuer tes
+  -4353536
   
   
 =======
