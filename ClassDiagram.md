@@ -1,4 +1,6 @@
- # 1. Überblick-Diagramm (Hauptkomponenten)
+# Catan - Vereinfachte Architektur
+
+## 1. Hauptkomponenten (vereinfacht)
 
 ```mermaid
 classDiagram
@@ -7,300 +9,381 @@ direction LR
 %% Hauptkomponenten
 class Game {
   -currentPhase: GamePhase
+  -currentPlayer: Player
+  -winner: Player
+  +diceRoll(): int
+  +produceResources(int diceRoll)
+  +checkVictory(): boolean
 }
 
 class GameController {
+  -game: Game
   +nextPhase()
-  +handleTurn()
+  +handlePlayerTurn()
+  +endGame()
 }
 
 class Player {
+  -id: int
+  -name: String
   -victoryPoints: int
+  -longestRoadLength: int
+  +canBuild(BuildingType type): boolean
+  +addVictoryPoints(int points)
 }
 
 class Board {
   -graph: Graph
+  -robber: Robber
+  +getValidBuildLocations(BuildingType): List<Location>
 }
 
 class Bank {
   -resources: Map<ResourceType, Integer>
-}
-
-class DevelopmentCardDeck {
-  -cards: List<DevelopmentCard>
+  +hasResources(Map<ResourceType, Integer>): boolean
+  +trade(Player player, ResourceType give, ResourceType get)
 }
 
 class ViewController {
-  +connectModelToView()
+  +updateGameState()
+  +showPlayerTurn()
+  +handleUserInput()
 }
 
-%% Beziehungen zwischen Hauptkomponenten
-Game --> GameController : controls
+%% Beziehungen
+Game --> GameController : controlled by
 Game --> Player : manages
 Game --> Board : uses
-Game --> Bank : manages resources
-Game --> DevelopmentCardDeck : manages cards
+Game --> Bank : manages
 GameController --> ViewController : updates
 ```
 
-# 2. Subdiagramm: Spielmechanik
-
+## 2. Spielmechanik (ohne Entwicklungskarten)
 
 ```mermaid
 classDiagram
 direction TB
 
-%% Enumerationen
+%% Spielphasen
 class GamePhase {
   <<enumeration>>
-  +SETUP
+  +SETUP_ROUND_1
+  +SETUP_ROUND_2
   +DICE_ROLL
   +RESOURCE_PRODUCTION
+  +ROBBER_MOVE
   +TRADE
-  +PLAY_DEV_CARD
   +BUILD
   +END_TURN
-  +END_GAME
+  +GAME_OVER
 }
 
-%% Spielmechanik-Klassen
+%% Spielmechanik
 class Game {
   -currentPhase: GamePhase
-  +diceThrow()
-  +produceResources(int diceRoll)
-  +calculateLongestRoad(Player player)
-  +calculateKnightEmpire(Player player)
-}
-
-class GameController {
-  +nextPhase()
-  +handleTurn()
+  -players: List<Player>
+  -currentPlayerIndex: int
+  -dice: Dice
+  +rollDice(): int
+  +moveRobber(HexTile newLocation)
+  +calculateLongestRoad(Player player): int
 }
 
 class TurnManager {
-  +nextPlayer()
-  +getCurrentPlayer()
+  -currentPlayerIndex: int
+  +nextPlayer(): Player
+  +getCurrentPlayer(): Player
+  +isSetupPhase(): boolean
 }
 
 class TradeController {
-  +executeTrade()
+  +bankTrade(Player player, ResourceType give, ResourceType get, int ratio)
+  +playerTrade(Player p1, Player p2, Map<ResourceType,Integer> offer)
 }
 
 class BuildController {
-  +buildRoad()
-  +buildSettlement()
-  +upgradeCity()
-}
-
-class DevCardController {
-  +playCard()
+  +buildRoad(Player player, Edge location): boolean
+  +buildSettlement(Player player, CrossingNode location): boolean
+  +canBuild(Player player, BuildingType type, Location loc): boolean
 }
 
 class SetupManager {
-  +initializePlayers()
-  +placeInitialSettlements()
+  -round: int
+  +placeInitialSettlement(Player player, CrossingNode location)
+  +placeInitialRoad(Player player, Edge location)
+  +isSetupComplete(): boolean
 }
 
 class VictoryManager {
-  +checkVictory(Player player)
-  +declareWinner()
+  +calculateVictoryPoints(Player player): int
+  +checkWinCondition(Player player): boolean
+  +updateLongestRoad()
 }
 
 %% Beziehungen
 Game --> GamePhase
-Game --> GameController
 Game --> TurnManager
 Game --> SetupManager
 Game --> VictoryManager
-GameController --> TradeController
-GameController --> BuildController
-GameController --> DevCardController
+Game --> TradeController
+Game --> BuildController
 ```
-# 3. Subdiagramm: Spielbrett und Spieler
 
+## 3. Spielbrett und Spieler (ohne Städte)
 
 ```mermaid
 classDiagram
 direction LR
 
-%% Spielbrett-Klassen
+%% Spielbrett
 class Board {
   -graph: Graph
-  +createBoard()
+  -hexTiles: List<HexTile>
+  +initializeStandardBoard()
 }
 
 class Graph {
-  -nodes: Map<int, CrossingNode>
+  -crossingNodes: Map<Integer, CrossingNode>
   -edges: List<Edge>
-  +calculateLongestRoad(Player): int
+  +findLongestRoad(Player player): int
+  +getAdjacentNodes(CrossingNode node): List<CrossingNode>
 }
 
 class CrossingNode {
+  -id: int
   -adjacentHexes: List<HexTile>
-  -building: Building
+  -building: Settlement
+  -validForBuilding: boolean
+  +canPlaceSettlement(): boolean
+  +getAdjacentEdges(): List<Edge>
 }
 
 class Edge {
-  -start: CrossingNode
-  -end: CrossingNode
-  -owner: Player
+  -id: int
+  -node1: CrossingNode
+  -node2: CrossingNode
+  -road: Road
+  +canPlaceRoad(): boolean
+  +isConnectedTo(Player player): boolean
 }
 
 class HexTile {
-  -number: int
+  -id: int
   -resourceType: ResourceType
+  -diceNumber: int
   -harbor: Harbor
+  -hasRobber: boolean
+  +produceResource(): ResourceType
 }
 
 class Harbor {
-  -acceptedResource: ResourceType
-  -tradeRate: int
+  -resourceType: ResourceType  // null für 3:1 Häfen
+  -tradeRatio: int
+  +getTradeRatio(ResourceType resource): int
 }
 
 class Robber {
-  -currentTile
-  +moveTo(HexTile tile)
-  +stealFrom(Player victim)
+  -currentHexTile: HexTile
+  +moveToHex(HexTile newLocation)
+  +blockProduction(HexTile tile): boolean
 }
 
-%% Spieler-Klassen
+%% Spieler (vereinfacht)
 class Player {
-  -knightCount: int
+  -id: int
+  -name: String
+  -color: PlayerColor
   -victoryPoints: int
-  +getResources() Map<ResourceType, Integer>
-  +buildSettlement(CrossingNode location)
-  +buildCity(CrossingNode location)
-  +buildStreet(Edge location)
+  -hand: Hand
+  -settlements: List<Settlement>
+  -roads: List<Road>
+  -hasLongestRoad: boolean
+  +addResources(Map<ResourceType, Integer> resources)
+  +removeResources(Map<ResourceType, Integer> resources)
+  +getTotalVictoryPoints(): int
 }
 
 class Hand {
   -resources: Map<ResourceType, Integer>
-  -cards: List<DevelopmentCard>
+  +addResource(ResourceType type, int amount)
+  +removeResource(ResourceType type, int amount)
+  +getTotalCards(): int
+  +hasResources(Map<ResourceType, Integer> required): boolean
 }
 
+%% Gebäude (nur Settlement und Road)
 class Building {
   <<abstract>>
   -owner: Player
+  -location: Location
 }
 
-class Settlement
-class City
-class Road
-Settlement --|> Building
-City --|> Building
-Road --|> Building
+class Settlement {
+  -crossingNode: CrossingNode
+  +getVictoryPoints(): int  // Immer 1
+  +getAdjacentHexes(): List<HexTile>
+}
+
+class Road {
+  -edge: Edge
+  +isConnectedToPlayerBuilding(): boolean
+}
+
+%% Enumerationen
+class ResourceType {
+  <<enumeration>>
+  +WOOD
+  +BRICK
+  +WOOL
+  +GRAIN
+  +ORE
+  +DESERT
+}
+
+class PlayerColor {
+  <<enumeration>>
+  +RED
+  +BLUE
+  +WHITE
+  +ORANGE
+}
 
 %% Beziehungen
 Board --> Graph
+Board --> HexTile
+Board --> Robber
 Graph --> CrossingNode
 Graph --> Edge
-Edge --> CrossingNode
-Edge --> Player
-CrossingNode --> HexTile
-CrossingNode --> Building
+CrossingNode --> Settlement
+Edge --> Road
 HexTile --> Harbor
-HexTile --> Robber
-Robber --> Player
+HexTile --> ResourceType
 Player --> Hand
-Player --> Building
+Player --> Settlement
+Player --> Road
+Settlement --|> Building
+Road --|> Building
 ```
-# 4. Subdiagramm: Entwicklungskarten
 
+## 4. GUI (JavaFX) - Vereinfacht
 
 ```mermaid
 classDiagram
 direction TB
 
-class DevelopmentCard {
-  <<abstract>>
-  -infoText: String
-  +cardAction()
-}
-
-class Knight {
-  +cardAction()
-}
-
-class VictoryPointCard {
-  +cardAction()
-}
-
-class MonopolyCard {
-  +cardAction()
-}
-
-class InventionCard {
-  +cardAction()
-}
-
-class RoadBuildingCard {
-  +cardAction()
-}
-
-class DevelopmentCardDeck {
-  -cards: List<DevelopmentCard>
-  +drawCard(): DevelopmentCard
-  +shuffle()
-}
-
-Knight --|> DevelopmentCard
-VictoryPointCard --|> DevelopmentCard
-MonopolyCard --|> DevelopmentCard
-InventionCard --|> DevelopmentCard
-RoadBuildingCard --|> DevelopmentCard
-
-```
-# 5. Subdiagramm: GUI (JavaFX)
-
-
-```mermaid
-classDiagram
-direction LR
-
-class MainView {
-  +start()
-}
-
-class PlayerView {
-  +updatePlayerResources()
-  +updateCards()
-}
-
-class BoardView {
-  +renderBoard()
-  +highlightBuildOptions()
+class MainApplication {
+  +start(Stage primaryStage)
+  +main(String[] args)
 }
 
 class GameView {
-  +updateGamePhase()
-  +showWinner()
+  -boardView: BoardView
+  -playerInfoView: PlayerInfoView
+  -gameControlsView: GameControlsView
+  +initializeLayout()
+  +updateGameState(Game game)
 }
 
-class ViewController {
-  +connectModelToView()
-  +registerListeners()
-  +onBuildSettlement(CrossingNode)
-  +onPlayCard(DevelopmentCard)
+class BoardView {
+  -hexagonPane: Pane
+  -settlements: List<Circle>
+  -roads: List<Line>
+  +renderBoard(Board board)
+  +highlightValidLocations(List<Location> locations)
+  +onHexClick(HexTile hex)
+  +onNodeClick(CrossingNode node)
+  +onEdgeClick(Edge edge)
 }
 
+class PlayerInfoView {
+  -resourceLabels: Map<ResourceType, Label>
+  -victoryPointsLabel: Label
+  +updateResources(Player player)
+  +updateVictoryPoints(Player player)
+  +highlightCurrentPlayer(Player player)
+}
+
+class GameControlsView {
+  -rollDiceButton: Button
+  -endTurnButton: Button
+  -tradeButton: Button
+  +enableControls(List<GameAction> availableActions)
+  +showGamePhase(GamePhase phase)
+}
+
+class TradeDialog {
+  -bankTradePane: VBox
+  -playerTradePane: VBox
+  +showBankTrade(Player player)
+  +showPlayerTrade(List<Player> players)
+}
+
+class GameController {
+  -game: Game
+  -gameView: GameView
+  +handleDiceRoll()
+  +handleBuildSettlement(CrossingNode location)
+  +handleBuildRoad(Edge location)
+  +handleTrade(TradeOffer offer)
+  +handleEndTurn()
+}
+
+%% Event System
 class GameEvent {
-  +eventType: String
-  +data: Object
+  -type: EventType
+  -data: Object
+  +getType(): EventType
+  +getData(): Object
 }
 
-class EventPublisher {
-  +subscribe(observer: Observer)
-  +notify(event: GameEvent)
+class EventType {
+  <<enumeration>>
+  +DICE_ROLLED
+  +RESOURCES_PRODUCED
+  +BUILDING_PLACED
+  +TURN_ENDED
+  +GAME_WON
 }
 
-class Observer {
-  +update(event: GameEvent)
-}
-
-MainView --> GameView
+%% Beziehungen
+MainApplication --> GameView
 GameView --> BoardView
-GameView --> PlayerView
-ViewController --> GameView
-ViewController --> EventPublisher
-ViewController --> Observer
+GameView --> PlayerInfoView
+GameView --> GameControlsView
+GameView --> TradeDialog
+GameController --> GameView
+GameController --> Game
+GameController --> GameEvent
+```
+
+## 5. Ressourcen und Konstanten
+
+```mermaid
+classDiagram
+direction TB
+
+class GameConstants {
+  +VICTORY_POINTS_TO_WIN: int = 10
+  +LONGEST_ROAD_MIN_LENGTH: int = 5
+  +LONGEST_ROAD_POINTS: int = 2
+  +SETTLEMENT_VICTORY_POINTS: int = 1
+  +INITIAL_SETTLEMENTS_PER_PLAYER: int = 2
+  +INITIAL_ROADS_PER_PLAYER: int = 2
+  +BANK_TRADE_RATIO: int = 4
+  +HARBOR_TRADE_RATIO_GENERIC: int = 3
+  +HARBOR_TRADE_RATIO_SPECIFIC: int = 2
+}
+
+class BuildingCosts {
+  +SETTLEMENT_COST: Map<ResourceType, Integer>
+  +ROAD_COST: Map<ResourceType, Integer>
+  +getCost(BuildingType type): Map<ResourceType, Integer>
+}
+
+class BoardConstants {
+  +HEX_NUMBERS: List<Integer>
+  +RESOURCE_DISTRIBUTION: Map<ResourceType, Integer>
+  +HARBOR_LOCATIONS: List<Integer>
+  +DESERT_HEX_ID: int
+}
 ```
