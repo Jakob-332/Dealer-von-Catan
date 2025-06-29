@@ -92,7 +92,7 @@
             <!-- Default configuration for running with: mvn clean javafx:run -->
             <id>default-cli</id>
             <configuration>
-              <mainClass>de.dhbw.catan.catan/de.dhbw.catan.catan.Main</mainClass>
+              <mainClass>de.dhbw.catan.catan/de.dhbw.catan.catan.Main</mainClass> <!-- anpassen, an tatsächliche main klasse -->
               <launcher>app</launcher>
               <jlinkZipName>app</jlinkZipName>
               <jlinkImageName>app</jlinkImageName>
